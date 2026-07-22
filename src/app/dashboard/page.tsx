@@ -4,7 +4,7 @@ import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight } from "lucide-react";
+import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight, Dumbbell, Flame, CheckCircle, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -22,6 +22,15 @@ interface RecentAnalysis {
   created_at: string;
 }
 
+interface TrainingSummary {
+  hasPlan: boolean;
+  streak: number;
+  todayCompleted: boolean;
+  todayWorkoutTitle: string | null;
+  completedThisWeek: number;
+  totalThisWeek: number;
+}
+
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
@@ -29,6 +38,14 @@ export default function DashboardPage() {
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [loadingAnalyses, setLoadingAnalyses] = useState(true);
+  const [trainingSummary, setTrainingSummary] = useState<TrainingSummary>({
+    hasPlan: false,
+    streak: 0,
+    todayCompleted: false,
+    todayWorkoutTitle: null,
+    completedThisWeek: 0,
+    totalThisWeek: 0,
+  });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -90,6 +107,50 @@ export default function DashboardPage() {
 
     if (isLoaded) {
       fetchAnalyses();
+    }
+  }, [isLoaded, getToken]);
+
+  // Fetch training summary
+  useEffect(() => {
+    const fetchTraining = async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${API_URL}/training-plans?limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || res.status === 404) return;
+        const data = await res.json();
+        if (data.plans && data.plans.length > 0) {
+          const plan = data.plans[0];
+          const today = new Date().getDay();
+          const adjusted = today === 0 ? 6 : today - 1;
+          const todayWorkout = plan.workouts?.find((w: any) => w.day_of_week === adjusted);
+          const completedCount = plan.workouts?.filter((w: any) => w.completed).length || 0;
+
+          // Calculate streak
+          let streakCount = 0;
+          for (let i = adjusted; i >= 0; i--) {
+            const dw = plan.workouts?.find((w: any) => w.day_of_week === i);
+            if (dw?.completed) streakCount++;
+            else break;
+          }
+
+          setTrainingSummary({
+            hasPlan: true,
+            streak: streakCount,
+            todayCompleted: todayWorkout?.completed || false,
+            todayWorkoutTitle: todayWorkout?.title || null,
+            completedThisWeek: completedCount,
+            totalThisWeek: plan.workouts?.length || 0,
+          });
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    if (isLoaded) {
+      fetchTraining();
     }
   }, [isLoaded, getToken]);
 
@@ -165,7 +226,7 @@ export default function DashboardPage() {
                 <TrendingUp className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{trainingSummary.completedThisWeek}</div>
                 <div className="text-xs text-zinc-400">Workouts completed</div>
               </div>
             </CardContent>
@@ -234,6 +295,62 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Training card ────────────────────────────────────────── */}
+        {trainingSummary.hasPlan && (
+          <Card className="border-orange-500/20 bg-gradient-to-r from-orange-500/5 to-amber-500/5 mb-10 hover:border-orange-500/30 transition-all duration-300">
+            <Link href="/dashboard/training" className="block">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                      <Dumbbell className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+                        This Week's Training
+                        {trainingSummary.streak >= 3 && (
+                          <span className="flex items-center gap-1 text-sm text-orange-400">
+                            <Flame className="w-4 h-4" />
+                            {trainingSummary.streak}-day streak
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-zinc-400 text-sm">
+                        {trainingSummary.todayCompleted
+                          ? "✅ Today's workout is done — great job!"
+                          : trainingSummary.todayWorkoutTitle
+                          ? `Today: ${trainingSummary.todayWorkoutTitle}`
+                          : "Check out your plan for this week"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {/* Mini progress */}
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      {Array.from({ length: 7 }, (_, i) => (
+                        <div
+                          key={i}
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            i < trainingSummary.completedThisWeek
+                              ? "bg-emerald-400"
+                              : i === trainingSummary.completedThisWeek && !trainingSummary.todayCompleted
+                              ? "bg-orange-400 animate-pulse"
+                              : "bg-zinc-700"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium text-orange-400 flex items-center gap-1">
+                      View Plan
+                      <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Link>
+          </Card>
+        )}
 
         {/* ── Recent Analyses ─────────────────────────────────────── */}
         {!loadingAnalyses && recentAnalyses.length > 0 && (

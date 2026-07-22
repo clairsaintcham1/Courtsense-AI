@@ -4,7 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Video, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, RefreshCw, Play } from "lucide-react";
+import { ArrowLeft, Video, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, RefreshCw, Play, Dumbbell } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -112,6 +112,7 @@ export default function VideoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startingAnalysis, setStartingAnalysis] = useState(false);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const fetchVideo = useCallback(async () => {
     try {
@@ -173,6 +174,33 @@ export default function VideoDetailPage() {
       alert(err.message || "Failed to start analysis");
     } finally {
       setStartingAnalysis(false);
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    setGeneratingPlan(true);
+    try {
+      const token = await getToken();
+      // Extract priority areas from the analysis to pre-fill
+      const priorityAreas = analysis?.feedback_json?.priority_areas || [];
+      const res = await fetch(`${API_URL}/training-plans/generate`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ focus_areas: priorityAreas }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Failed to generate training plan");
+      }
+      // Redirect to training page
+      window.location.href = "/dashboard/training";
+    } catch (err: any) {
+      alert(err.message || "Failed to generate training plan");
+    } finally {
+      setGeneratingPlan(false);
     }
   };
 
@@ -536,6 +564,47 @@ export default function VideoDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ── Generate Training Plan CTA ──────────────────────────── */}
+            <Card className="border-orange-500/20 bg-gradient-to-r from-orange-500/5 to-amber-500/5 mb-8">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-white font-semibold text-lg">
+                      Ready to Train?
+                    </h3>
+                    <p className="text-zinc-400 text-sm mt-0.5">
+                      Generate a personalized 7-day workout plan targeting your weak areas —
+                      {analysis.feedback_json?.priority_areas?.length
+                        ? ` ${analysis.feedback_json.priority_areas
+                            .map((a: string) => CATEGORY_LABELS[a] || a)
+                            .join(", ")}`
+                        : " based on your analysis"}
+                    </p>
+                  </div>
+                  <Button
+                    className="gap-2 shrink-0"
+                    onClick={handleGeneratePlan}
+                    disabled={generatingPlan}
+                  >
+                    {generatingPlan ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Generate Training Plan
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* ── Raw analysis data (collapsed for debugging) ────────── */}
             <details className="mb-8">

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import health, videos, analyses
+from app.api.endpoints import health, videos, analyses, training
 
 api_router = APIRouter()
 
@@ -12,3 +12,6 @@ api_router.include_router(videos.router, tags=["videos"])
 
 # Analyses
 api_router.include_router(analyses.router, tags=["analyses"])
+
+# Training plans & workouts
+api_router.include_router(training.router, tags=["training"])
