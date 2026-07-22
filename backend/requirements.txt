@@ -11,3 +11,4 @@ python-jose[cryptography]==3.3.*
 boto3==1.36.*
 stripe==11.*
 openai==1.*
+opencv-python-headless==4.10.*

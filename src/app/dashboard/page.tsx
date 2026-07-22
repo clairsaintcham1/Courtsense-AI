@@ -1,10 +1,10 @@
 "use client";
 
-import { useUser, useClerk } from "@clerk/nextjs";
+import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video } from "lucide-react";
+import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -13,10 +13,24 @@ interface OnboardingData {
   displayName: string;
 }
 
+interface RecentAnalysis {
+  id: string;
+  video_id: string;
+  overall_score: number | null;
+  confidence_level: string | null;
+  feedback_json: any;
+  created_at: string;
+}
+
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { getToken } = useAuth();
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
+  const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
+  const [loadingAnalyses, setLoadingAnalyses] = useState(true);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
   useEffect(() => {
     const stored = localStorage.getItem("courtsense_onboarding");
@@ -28,6 +42,56 @@ export default function DashboardPage() {
       }
     }
   }, []);
+
+  // Fetch recent analyses using the videos list endpoint
+  useEffect(() => {
+    const fetchAnalyses = async () => {
+      try {
+        const token = await getToken();
+        const res = await fetch(`${API_URL}/videos?limit=3`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // For each ready video, fetch its detail to get the analysis
+        const analyses: RecentAnalysis[] = [];
+        for (const video of data.videos || []) {
+          if (video.status === "ready") {
+            try {
+              const detailRes = await fetch(`${API_URL}/videos/${video.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (detailRes.ok) {
+                const detail = await detailRes.json();
+                if (detail.analysis && detail.analysis.status === "completed") {
+                  analyses.push({
+                    id: detail.analysis.id,
+                    video_id: video.id,
+                    overall_score: detail.analysis.overall_score,
+                    confidence_level: detail.analysis.confidence_level,
+                    feedback_json: detail.analysis.feedback_json,
+                    created_at: detail.analysis.created_at,
+                  });
+                }
+              }
+            } catch {
+              // skip individual fetch errors
+            }
+          }
+        }
+        setRecentAnalyses(analyses);
+      } catch {
+        // Silently fail — analyses list is non-critical
+      } finally {
+        setLoadingAnalyses(false);
+      }
+    };
+
+    if (isLoaded) {
+      fetchAnalyses();
+    }
+  }, [isLoaded, getToken]);
 
   if (!isLoaded) {
     return (
@@ -90,7 +154,7 @@ export default function DashboardPage() {
                 <Video className="w-5 h-5 text-orange-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">0</div>
+                <div className="text-2xl font-bold text-white">{recentAnalyses.length}</div>
                 <div className="text-xs text-zinc-400">Videos analyzed</div>
               </div>
             </CardContent>
@@ -120,7 +184,7 @@ export default function DashboardPage() {
         </div>
 
         {/* CTAs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
           <Card className="border-zinc-800 bg-zinc-900/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer">
             <Link href="/dashboard/upload" className="block">
               <CardHeader>
@@ -170,6 +234,81 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Recent Analyses ─────────────────────────────────────── */}
+        {!loadingAnalyses && recentAnalyses.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-orange-400" />
+                Recent Analyses
+              </h2>
+              <Link
+                href="/dashboard/videos"
+                className="text-sm text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors"
+              >
+                View all
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recentAnalyses.map((analysis) => (
+                <Link key={analysis.id} href={`/dashboard/videos/${analysis.video_id}`}>
+                  <Card className="border-zinc-800 bg-zinc-900/60 hover:border-orange-500/30 transition-all duration-300 cursor-pointer h-full">
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              analysis.confidence_level === "high"
+                                ? "bg-emerald-400"
+                                : analysis.confidence_level === "medium"
+                                ? "bg-amber-400"
+                                : "bg-red-400"
+                            }`}
+                          />
+                          <span className="text-xs text-zinc-400 capitalize">
+                            {analysis.confidence_level || "unknown"} confidence
+                          </span>
+                        </div>
+                        <span className="text-xs text-zinc-500">
+                          {new Date(analysis.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <div className="text-3xl font-bold text-white">
+                            {analysis.overall_score ?? "—"}
+                          </div>
+                          <div className="text-xs text-zinc-500">Overall Score</div>
+                        </div>
+                        {analysis.feedback_json?.summary && (
+                          <p className="text-xs text-zinc-400 line-clamp-2 max-w-[60%] text-right">
+                            {analysis.feedback_json.summary}
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!loadingAnalyses && recentAnalyses.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-zinc-500 text-sm">
+              No analyses yet. Upload your first video to get started!
+            </p>
+          </div>
+        )}
+
+        {loadingAnalyses && (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-5 h-5 border-2 border-zinc-600 border-t-orange-500 rounded-full animate-spin" />
+          </div>
+        )}
       </main>
     </div>
   );

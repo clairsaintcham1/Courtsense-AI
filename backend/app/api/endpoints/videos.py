@@ -2,13 +2,14 @@
 Video endpoints — upload, list, retrieve.
 """
 
+import asyncio
 import uuid
 from datetime import datetime
 from typing import Annotated
 
 import boto3
 from botocore.config import Config as BotoConfig
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +17,9 @@ from sqlalchemy.orm import selectinload
 
 from app.api.dependencies import get_current_athlete
 from app.config import settings
-from app.database import get_db
+from app.database import get_db, async_session_factory
 from app.models import Athlete, Video, Analysis
+from app.models.analysis import AnalysisStatus
 from app.models.video import VideoStatus
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -169,14 +171,15 @@ async def create_upload_url(
 @router.post("", response_model=VideoResponse, status_code=status.HTTP_200_OK)
 async def confirm_upload(
     body: ConfirmUploadRequest,
+    background_tasks: BackgroundTasks,
     athlete: Annotated[Athlete, Depends(get_current_athlete)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Confirm that a video has been uploaded to S3 and trigger processing.
 
     The client calls this after the direct-to-S3 PUT completes.  We verify the
-    S3 key belongs to the athlete, update status to 'processing', and return
-    the updated video record.
+    S3 key belongs to the athlete, update status to 'processing', launch the
+    AI analysis in the background, and return the updated video record.
     """
     # Find the video by s3_key, scoped to this athlete
     result = await db.execute(
@@ -205,11 +208,29 @@ async def confirm_upload(
     if body.file_size_bytes is not None:
         video.file_size_bytes = body.file_size_bytes
 
+    # Create a pending Analysis record so the frontend sees it's processing
+    analysis = Analysis(
+        video_id=video.id,
+        athlete_id=video.athlete_id,
+        status=AnalysisStatus.processing,
+    )
+    db.add(analysis)
     await db.flush()
 
-    # TODO: enqueue analysis job in Redis once background worker is built
-    # For now, videos just move to 'processing' and stay there
-    # until the worker is implemented.
+    # ── Launch AI analysis in the background (asyncio.create_task for MVP) ──
+    from app.services.analysis_service import analyze_video
+
+    async def run_analysis():
+        """Background analysis with its own DB session."""
+        async with async_session_factory() as bg_db:
+            try:
+                await analyze_video(video.id, bg_db)
+                await bg_db.commit()
+            except Exception:
+                await bg_db.rollback()
+                # Error is already handled inside analyze_video
+
+    background_tasks.add_task(run_analysis)
 
     return _video_to_response(video)
 
