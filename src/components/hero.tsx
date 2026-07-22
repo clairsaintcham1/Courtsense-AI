@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 export function Hero() {
   const [email, setEmail] = useState("");
@@ -19,6 +20,28 @@ export function Hero() {
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-orange-500/5 via-transparent to-transparent pointer-events-none" />
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header nav */}
+      <header className="absolute top-0 left-0 right-0 z-20 px-4">
+        <div className="max-w-6xl mx-auto h-16 flex items-center justify-between">
+          <span className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
+            CourtSense AI
+          </span>
+          <div className="flex items-center gap-3">
+            <Link href="/sign-in">
+              <Button variant="ghost" size="sm">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button size="sm">
+                Get Started
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
 
       <div className="relative z-10 max-w-4xl mx-auto text-center py-20">
         <Badge variant="default" className="mb-6 text-sm px-4 py-1.5">
