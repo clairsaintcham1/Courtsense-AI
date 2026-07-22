@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface OnboardingData {
   role: string;
@@ -121,24 +122,26 @@ export default function DashboardPage() {
         {/* CTAs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="border-zinc-800 bg-zinc-900/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-3 shadow-lg shadow-orange-500/20">
-                <Upload className="w-6 h-6 text-white" />
-              </div>
-              <CardTitle className="text-xl text-white group-hover:text-orange-400 transition-colors">
-                Upload Video
-              </CardTitle>
-              <CardDescription className="text-zinc-400 text-sm leading-relaxed">
-                Upload your training or game footage and get instant AI-powered
-                analysis of your shooting form, footwork, ball handling, and more.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full gap-2">
-                <Upload className="w-4 h-4" />
-                Upload &amp; Analyze
-              </Button>
-            </CardContent>
+            <Link href="/dashboard/upload" className="block">
+              <CardHeader>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center mb-3 shadow-lg shadow-orange-500/20">
+                  <Upload className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle className="text-xl text-white group-hover:text-orange-400 transition-colors">
+                  Upload Video
+                </CardTitle>
+                <CardDescription className="text-zinc-400 text-sm leading-relaxed">
+                  Upload your training or game footage and get instant AI-powered
+                  analysis of your shooting form, footwork, ball handling, and more.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full gap-2">
+                  <Upload className="w-4 h-4" />
+                  Upload &amp; Analyze
+                </Button>
+              </CardContent>
+            </Link>
           </Card>
 
           <Card className="border-zinc-800 bg-zinc-900/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer">
