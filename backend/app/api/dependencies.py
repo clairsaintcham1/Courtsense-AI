@@ -91,3 +91,55 @@ async def get_current_athlete(
         )
 
     return athlete
+
+
+async def get_current_coach(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> "Coach":
+    """Require that the current user is a coach, returning the Coach profile."""
+    from app.models import Coach
+
+    if current_user.role.value != "coach":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Coach role required",
+        )
+
+    result = await db.execute(
+        select(Coach).where(Coach.user_id == current_user.id)
+    )
+    coach = result.scalar_one_or_none()
+    if coach is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Coach profile not found",
+        )
+
+    return coach
+
+
+async def get_current_parent(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> "Parent":
+    """Require that the current user is a parent, returning the Parent profile."""
+    from app.models import Parent
+
+    if current_user.role.value != "parent":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Parent role required",
+        )
+
+    result = await db.execute(
+        select(Parent).where(Parent.user_id == current_user.id)
+    )
+    parent = result.scalar_one_or_none()
+    if parent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Parent profile not found",
+        )
+
+    return parent

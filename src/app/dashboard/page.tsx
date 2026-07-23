@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser, useClerk, useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
+  const router = useRouter();
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [recentAnalyses, setRecentAnalyses] = useState<RecentAnalysis[]>([]);
   const [loadingAnalyses, setLoadingAnalyses] = useState(true);
@@ -59,6 +61,16 @@ export default function DashboardPage() {
       }
     }
   }, []);
+
+  // Role-based redirect: coaches and parents get their specialized dashboards
+  useEffect(() => {
+    if (!isLoaded || !onboarding) return;
+    if (onboarding.role === "coach") {
+      router.replace("/dashboard/coach");
+    } else if (onboarding.role === "parent") {
+      router.replace("/dashboard/parent");
+    }
+  }, [isLoaded, onboarding, router]);
 
   // Fetch recent analyses using the videos list endpoint
   useEffect(() => {
