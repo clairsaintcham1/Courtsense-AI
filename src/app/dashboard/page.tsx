@@ -270,29 +270,26 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="border-zinc-800 bg-zinc-900/60 hover:border-orange-500/30 transition-all duration-300 group cursor-pointer">
-            <CardHeader>
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-600 flex items-center justify-center mb-3">
-                <MessageCircle className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex items-center gap-3">
-                <CardTitle className="text-xl text-zinc-300">
+            <Link href="/dashboard/chat" className="block">
+              <CardHeader>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-zinc-700 to-zinc-600 flex items-center justify-center mb-3">
+                  <MessageCircle className="w-6 h-6 text-white" />
+                </div>
+                <CardTitle className="text-xl text-white group-hover:text-orange-400 transition-colors">
                   Chat with Coach AI
                 </CardTitle>
-                <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-                  Coming soon
-                </Badge>
-              </div>
-              <CardDescription className="text-zinc-500 text-sm leading-relaxed">
-                Get instant answers to basketball questions, drills recommendations,
-                and strategic advice from your 24/7 AI coach.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="secondary" className="w-full gap-2" disabled>
-                <MessageCircle className="w-4 h-4" />
-                Coming Soon
-              </Button>
-            </CardContent>
+                <CardDescription className="text-zinc-400 text-sm leading-relaxed">
+                  Get instant answers to basketball questions, drills recommendations,
+                  and strategic advice from your 24/7 AI coach.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Start Chatting
+                </Button>
+              </CardContent>
+            </Link>
           </Card>
         </div>
 
