@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import health, videos, analyses, training, chat
+from app.api.endpoints import health, videos, analyses, training, chat, progress
 
 api_router = APIRouter()
 
@@ -18,3 +18,6 @@ api_router.include_router(training.router, tags=["training"])
 
 # AI Coach chat
 api_router.include_router(chat.router, tags=["chat"])
+
+# Progress tracking & skill ratings
+api_router.include_router(progress.router, tags=["progress"])

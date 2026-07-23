@@ -4,7 +4,7 @@ import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight, Dumbbell, Flame, CheckCircle, Circle } from "lucide-react";
+import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight, Dumbbell, Flame, CheckCircle, Circle, BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -208,7 +208,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <Card className="border-zinc-800 bg-zinc-900/60">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
@@ -242,6 +242,18 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* View Full Progress link */}
+        <div className="mb-10">
+          <Link
+            href="/dashboard/progress"
+            className="inline-flex items-center gap-1.5 text-sm text-orange-400 hover:text-orange-300 transition-colors group"
+          >
+            <BarChart3 className="w-4 h-4" />
+            View Full Progress
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
 
         {/* CTAs */}
@@ -296,56 +308,71 @@ export default function DashboardPage() {
         {/* ── Training card ────────────────────────────────────────── */}
         {trainingSummary.hasPlan && (
           <Card className="border-orange-500/20 bg-gradient-to-r from-orange-500/5 to-amber-500/5 mb-10 hover:border-orange-500/30 transition-all duration-300">
-            <Link href="/dashboard/training" className="block">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-                      <Dumbbell className="w-6 h-6 text-orange-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-white font-semibold text-lg flex items-center gap-2">
-                        This Week's Training
-                        {trainingSummary.streak >= 3 && (
-                          <span className="flex items-center gap-1 text-sm text-orange-400">
-                            <Flame className="w-4 h-4" />
-                            {trainingSummary.streak}-day streak
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-zinc-400 text-sm">
-                        {trainingSummary.todayCompleted
-                          ? "✅ Today's workout is done — great job!"
-                          : trainingSummary.todayWorkoutTitle
-                          ? `Today: ${trainingSummary.todayWorkoutTitle}`
-                          : "Check out your plan for this week"}
-                      </p>
-                    </div>
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+                    <Dumbbell className="w-6 h-6 text-orange-400" />
                   </div>
-                  <div className="flex items-center gap-4">
-                    {/* Mini progress */}
-                    <div className="hidden sm:flex items-center gap-1.5">
-                      {Array.from({ length: 7 }, (_, i) => (
+                  <div>
+                    <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+                      This Week's Training
+                      {trainingSummary.streak >= 3 && (
+                        <span className="flex items-center gap-1 text-sm text-orange-400">
+                          <Flame className="w-4 h-4" />
+                          {trainingSummary.streak}-day streak
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-zinc-400 text-sm">
+                      {trainingSummary.todayCompleted
+                        ? "✅ Today's workout is done — great job!"
+                        : trainingSummary.todayWorkoutTitle
+                        ? `Today: ${trainingSummary.todayWorkoutTitle}`
+                        : "Check out your plan for this week"}
+                    </p>
+                    {/* Progress bar for the week */}
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                         <div
-                          key={i}
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            i < trainingSummary.completedThisWeek
-                              ? "bg-emerald-400"
-                              : i === trainingSummary.completedThisWeek && !trainingSummary.todayCompleted
-                              ? "bg-orange-400 animate-pulse"
-                              : "bg-zinc-700"
-                          }`}
+                          className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${trainingSummary.totalThisWeek > 0 ? (trainingSummary.completedThisWeek / trainingSummary.totalThisWeek) * 100 : 0}%`,
+                          }}
                         />
-                      ))}
+                      </div>
+                      <span className="text-xs text-zinc-500">
+                        {trainingSummary.completedThisWeek}/{trainingSummary.totalThisWeek} done
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-orange-400 flex items-center gap-1">
-                      View Plan
-                      <ArrowRight className="w-4 h-4" />
-                    </span>
                   </div>
                 </div>
-              </CardContent>
-            </Link>
+                <div className="flex items-center gap-4">
+                  {/* Mini progress dots */}
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    {Array.from({ length: 7 }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          i < trainingSummary.completedThisWeek
+                            ? "bg-emerald-400"
+                            : i === trainingSummary.completedThisWeek && !trainingSummary.todayCompleted
+                            ? "bg-orange-400 animate-pulse"
+                            : "bg-zinc-700"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <Link
+                    href="/dashboard/training"
+                    className="text-sm font-medium text-orange-400 flex items-center gap-1 hover:text-orange-300 transition-colors"
+                  >
+                    View Plan
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         )}
 
