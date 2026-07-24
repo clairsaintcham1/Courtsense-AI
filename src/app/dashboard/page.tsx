@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight, Dumbbell, Flame, CheckCircle, Circle, BarChart3 } from "lucide-react";
+import { Upload, MessageCircle, LogOut, Sparkles, TrendingUp, Clock, Video, ArrowRight, Dumbbell, Flame, CheckCircle, Circle, BarChart3, Trophy, Medal, Award, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -47,6 +47,17 @@ export default function DashboardPage() {
     todayWorkoutTitle: null,
     completedThisWeek: 0,
     totalThisWeek: 0,
+  });
+  const [communitySummary, setCommunitySummary] = useState<{
+    rank: number | null;
+    totalAthletes: number;
+    recentBadges: { name: string; earned_at: string }[];
+    activeChallenges: number;
+  }>({
+    rank: null,
+    totalAthletes: 0,
+    recentBadges: [],
+    activeChallenges: 0,
   });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
@@ -166,6 +177,70 @@ export default function DashboardPage() {
     }
   }, [isLoaded, getToken]);
 
+  // Fetch community summary
+  useEffect(() => {
+    const fetchCommunity = async () => {
+      try {
+        const token = await getToken();
+        // Get leaderboard position
+        const lbRes = await fetch(`${API_URL}/leaderboard?sort=score&limit=100`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        let rank: number | null = null;
+        let totalAthletes = 0;
+        if (lbRes.ok) {
+          const lb = await lbRes.json();
+          totalAthletes = lb.total || 0;
+          // Find current athlete's rank
+          const stored = localStorage.getItem("courtsense_onboarding");
+          if (stored) {
+            const data = JSON.parse(stored);
+            const entries = lb.leaderboard || [];
+            const idx = entries.findIndex((e: any) => e.athlete_id === data.athleteId);
+            if (idx >= 0) rank = idx + 1;
+          }
+        }
+
+        // Get recent badges
+        let recentBadges: { name: string; earned_at: string }[] = [];
+        const stored = localStorage.getItem("courtsense_onboarding");
+        if (stored) {
+          const data = JSON.parse(stored);
+          if (data.athleteId) {
+            const badgeRes = await fetch(`${API_URL}/athletes/${data.athleteId}/badges`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (badgeRes.ok) {
+              const badgeData = await badgeRes.json();
+              recentBadges = (badgeData.badges || []).slice(0, 3).map((b: any) => ({
+                name: b.name,
+                earned_at: b.earned_at,
+              }));
+            }
+          }
+        }
+
+        // Get active challenges count
+        let activeChallenges = 0;
+        const challengeRes = await fetch(`${API_URL}/challenges?status=active`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (challengeRes.ok) {
+          const cData = await challengeRes.json();
+          activeChallenges = cData.total || 0;
+        }
+
+        setCommunitySummary({ rank, totalAthletes, recentBadges, activeChallenges });
+      } catch {
+        // Silently fail — community summary is non-critical
+      }
+    };
+
+    if (isLoaded) {
+      fetchCommunity();
+    }
+  }, [isLoaded, getToken]);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
@@ -267,6 +342,72 @@ export default function DashboardPage() {
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
+
+        {/* ── Community Summary ──────────────────────────────────────── */}
+        <Card className="border-zinc-800 bg-zinc-900/60 mb-10">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-white font-semibold flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-orange-400" />
+                Community
+              </h3>
+              <Link
+                href="/dashboard/community"
+                className="text-sm text-orange-400 hover:text-orange-300 flex items-center gap-1 transition-colors"
+              >
+                View Community
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Leaderboard rank */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                <Medal className="w-8 h-8 text-amber-400 shrink-0" />
+                <div>
+                  <div className="text-lg font-bold text-white">
+                    {communitySummary.rank ? `#${communitySummary.rank}` : "—"}
+                  </div>
+                  <div className="text-xs text-zinc-400">
+                    {communitySummary.rank
+                      ? `of ${communitySummary.totalAthletes} athletes`
+                      : "Not ranked yet"}
+                  </div>
+                </div>
+              </div>
+              {/* Active challenges */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                <Trophy className="w-8 h-8 text-orange-400 shrink-0" />
+                <div>
+                  <div className="text-lg font-bold text-white">
+                    {communitySummary.activeChallenges}
+                  </div>
+                  <div className="text-xs text-zinc-400">Active challenges</div>
+                </div>
+              </div>
+              {/* Recent badges */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-zinc-800/50">
+                <Award className="w-8 h-8 text-orange-400 shrink-0" />
+                <div>
+                  {communitySummary.recentBadges.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {communitySummary.recentBadges.map((b, i) => (
+                        <span
+                          key={i}
+                          className="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 font-medium"
+                        >
+                          {b.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-zinc-500">No badges yet</div>
+                  )}
+                  <div className="text-xs text-zinc-400 mt-1">Recent badges</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* CTAs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">

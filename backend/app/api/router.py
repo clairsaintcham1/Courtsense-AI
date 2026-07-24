@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import health, videos, analyses, training, chat, progress, coach, parent
+from app.api.endpoints import health, videos, analyses, training, chat, progress, coach, parent, community
 
 api_router = APIRouter()
 
@@ -27,3 +27,6 @@ api_router.include_router(coach.router, tags=["coach"])
 
 # Parent — linked athlete monitoring
 api_router.include_router(parent.router, tags=["parent"])
+
+# Community — challenges, leaderboard, badges, team joining
+api_router.include_router(community.router, tags=["community"])
